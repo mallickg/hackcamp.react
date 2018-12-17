@@ -1,79 +1,77 @@
-import React, {Component} from 'react';
-import logo from './images/hackflix_logo.svg';
-import filters from './mocks/filters';
-import './css/Header.css';
-import movies from './mocks/movies';
-import {Movie} from "./components/Movie";
+import React, {Component, createContext} from 'react'
+import logo from './images/hackflix_logo.svg'
+import filters from './mocks/filters'
+import './css/Header.css'
+import movies from './mocks/movies'
+import {Header} from './components/Header'
+import {NavBar} from './components/NavBar'
+import {Movies} from './components/Movies'
+import {SideBar} from './components/SideBar'
+import {filterMoviesByCat, getGenreId} from './libs/utils'
+
+const UIContext = createContext()
+export const UIContextProvider = UIContext.Provider
+export const UIContextConsumer = UIContext.Consumer
 
 export class App extends Component {
   state = {
-    movies,
-    filters
-  };
+    movies: movies,
+    filters: filters,
+    active: false,
+    selectedCategory: 'All',
+  }
+
+  selectMovies = category => filterMoviesByCat(movies, getGenreId(category))
+
+  selectFilters = category =>
+    this.state.filters.map(filter => ({
+      ...filter,
+      selected: category === filter.category,
+    }))
 
   selectTab = category => {
     // We need to update the `selected` property of the clicked category to be true.
     // We should also filter the movies which are passed to the movie list
-  };
+    const newFilters = this.selectFilters(category)
+    const filteredMovies =
+      category === 'All' ? movies : this.selectMovies(category)
+    this.setState({
+      filters: newFilters,
+      movies: filteredMovies,
+      selectedCategory: category,
+    })
+  }
 
-  openSideBar = () => {
+  toggle = () => {
     // We need to toggle the state of the sidebar here to make sure it is in an open state
-  };
+    this.setState({active: !this.state.active})
+  }
+
+  search = value => {
+    const filteredMovies = this.selectMovies(
+      this.state.selectedCategory
+    ).filter(movie => movie.title.toLowerCase().includes(value.toLowerCase()))
+
+    this.setState({movies: filteredMovies})
+  }
 
   render() {
-    const {movies, filters} = this.state;
+    const {movies, filters, active} = this.state
     return (
-      <header>
-        <img src=logo alt="logo" />
-      </header>
-      <main class="main-content">
-        <div className="tab-filter-wrapper">
-          <div className="tab-filter">
-            <div className="filters">
-              <ul className="filters-list">
-                {filters.map(filter =>
-                  <li onClick={() => this.selectTab()}>
-                    <a className={filter.selected ? 'selected' : ''}>
-                      {filter.category}
-                    </a>
-                  </li>
-                )}
-              </ul>
-              <ul className="misc">
-                <li class="counter">
-                  <a>42</a>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        {/*If the sidebar is open you need to add the css class filter-is-visible to the div below*/}
-        <section class="gallery">
-          {movies.map(movie =>
-            <Movie key={movie.id} data={movie} selectMovie={() => {alert("Movie clicked")}} />
-          )}
-        </section>
-
-        <div>
-          {/*If the sidebar is open you need to add the css class filter-is-visible to the div below*/}
-          <div className={'filter'}>
-            <form onSubmit={e => e.preventDefault()}>
-              <div className="filter-block">
-                <h4>Search</h4>
-                <div className="filter-content">
-                  <input type="search" placeholder="title" />
-                </div>
-              </div>
-            </form>
-            <a className="hand-cursor close-f" [onClick]="[{(this.openSideBar)}]">Close</a>
-          </div>
-
-          <a className="hand-cursor filter-trigger">
-            Filters
-          </a>
-        </div>
-      </main>
-    );
+      <UIContextProvider value={{selectTab: this.selectTab}}>
+        <React.Fragment>
+          <Header logo={logo} />
+          <main className="main-content">
+            <NavBar filters={filters} counter={movies.length} />
+            <Movies movies={movies} active={active} />
+            <SideBar
+              toggle={this.toggle}
+              active={active}
+              search={this.search}
+            />
+          </main>
+        </React.Fragment>
+      </UIContextProvider>
+    )
   }
 }
